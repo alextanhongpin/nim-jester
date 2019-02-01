@@ -1,0 +1,5 @@
+## Init
+
+```bash
+$ nimble init
+```
