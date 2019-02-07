@@ -2,12 +2,19 @@
 import jester, posix
 import db_mysql
 import ospaths
+import json
+import strutils
+
+import echo/echo
+
+var db: DbConn
 
 onSignal(SIGINT, SIGTERM):
   ## Handle SIGABRT from systemd
   # Lines printed to stdout will be received by systemd and logged
   # Start with "<severity>" from 0 to 7
-  echo "<2>Received"
+  echo "terminating"
+  db.close()
   quit(QuitSuccess)
 
 
@@ -18,25 +25,20 @@ type
     dbPass: string
     dbName: string
 
-proc newConfig(): Config = 
-  var c: Config
-  new(c)
-  c.dbHost = getEnv("DB_HOST", "127.0.0.1")
-  c.dbUser = getEnv("DB_USER", "john")
-  c.dbPass = getEnv("DB_PASS", "123456")
-  c.dbName = getEnv("DB_NAME", "nim_test")
-  return c
-  
-let c = newConfig()
-let db = open(c.dbHost, c.dbUser, c.dbPass, c.dbName)
+proc newConfig(): Config =
+  new result
+  result.dbHost = getEnv("DB_HOST", "127.0.0.1")
+  result.dbUser = getEnv("DB_USER", "john")
+  result.dbPass = getEnv("DB_PASS", "123456")
+  result.dbName = getEnv("DB_NAME", "nim_test")
 
-let result = db.getRow(sql"SELECT 1 + 1")
-echo result
-db.close()
+proc main() =
+  let c = newConfig()
+  db = open(c.dbHost, c.dbUser, c.dbPass, c.dbName)
+  let ctrl = newEchoController(db)
+  ctrl.setup()
 
-routes:
-  get "/":
-    resp "Hello world"
 
 if isMainModule:
+  main()
   runForever()
